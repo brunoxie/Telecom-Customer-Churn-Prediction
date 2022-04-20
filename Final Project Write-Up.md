@@ -127,10 +127,10 @@ There are also potential improvements that could be made based on our models. On
  
 ## Reference
 
-(1)	Telecom Official Website: https://www.telco.com/about-us/ 
-(2)	Investopedia: investopedia.com/terms/c/churnrate.asp  
-(3)	Customer churn analysis: One of SaaS’ most important processes: https://www.profitwell.com/customer-churn/analysis 
-(4)	Hubspot:  https://blog.hubspot.com/service/what-is-customer-churn 
+1. [Telecom Official Website](https://www.telco.com/about-us/)
+2. [Investopedia](investopedia.com/terms/c/churnrate.asp)
+3. [Customer churn analysis: One of SaaS’ most important processes](https://www.profitwell.com/customer-churn/analysis)
+4. [Hubspot](https://blog.hubspot.com/service/what-is-customer-churn)
 				
 
 
