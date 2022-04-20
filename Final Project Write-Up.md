@@ -28,18 +28,27 @@ The data was downloaded from IBM Sample Data Sets for customer retention program
 
 We started our analysis with a quick look at the distribution of Churn. Among 7043 users, 26.58% of them churned and it is a relatively large proportion, indicating Telco’s  urgent need for customer retention management. This also implies that the data is unbalanced, which might undermine the performance of our models. We will address this issue later in the paper.
  
+![alt text](https://github.com/brunoxie/Machine-Learning-Final-Project/blob/main/Picture1.png)
 
 We examined the relationships between different features and Churn and found the ones that might affect the outcome. As it can be seen from the distribution of churn rates for different demographic groups, there is no significant difference in terms of gender, senior users have a higher churn rate, and users who do not have partners and dependents are more likely to churn. 
  
+![alt text](https://github.com/brunoxie/Machine-Learning-Final-Project/blob/main/Picture2.png)
+ 
 As for users in different services, those who use Fiber optic have a distinctly much higher churn rate than other users. There is not much difference in terms of phone service, and multiple lines.
+
+![alt text](https://github.com/brunoxie/Machine-Learning-Final-Project/blob/main/Picture3.png)
  
 We took a deeper look at the specific services users use, and found that users that don’t have online security, online backup, device protection, technical support, streaming TV or streaming movies have a higher churn rate than those who do have these services. 
  
+![alt text](https://github.com/brunoxie/Machine-Learning-Final-Project/blob/main/Picture4.png)
+
 Churn rates also show an interesting relationship with users' payment methods, those who pay monthly and those use paperless billing are more likely to churn and those who pay by electronic check have a significant higher churn rate. 
- 
+
+![alt text](https://github.com/brunoxie/Machine-Learning-Final-Project/blob/main/Picture5.png)
 
 The results below align with our expectation about customer brand loyalty. Those who have a longer time using Telco services have a lower chance to leave their program. Additionally, higher monthly charges may lead to a higher rate of leaving, which leads our research to pricing strategy. In total charges, users that have churned tend to have lower total charges. This is a reasonable result given they have shorter time using Telco.
- 
+
+![alt text](https://github.com/brunoxie/Machine-Learning-Final-Project/blob/main/Picture6.png)
 
 **Data Processing**
 
@@ -72,70 +81,59 @@ Boosted Tree	1490.41	0.7838	0.8493	1574.47	0.7662	0.8528
 
 * Logistic Regression
 In logistic regression, we consider the 3 types of models: regular logistic regression, lasso model with lambda that minimizes cross-validated error, lasso model with lambda in which the error is within 1 se of the minimum. These three models have similar predictive powers in terms of deviance, accuracy, and AUC. In this part, we chose logistic regression as the final model given it has the smallest deviance. We trained the final logistic regression on the data combined with the training set and validation set.
- 
+
+![alt text](https://github.com/brunoxie/Machine-Learning-Final-Project/blob/main/Picture7.png)
 
 * Random Forest 
 For random forest models, we ran a parameter search for number of trees, number of variables to possibly split at in each node, and minimal node size to tune the parameters. Based on deviance, we select the optimal parameters where number of trees equals to 1000, number of variables to split equals to 5, and minimal node size equals to 5. 
  
+![alt text](https://github.com/brunoxie/Machine-Learning-Final-Project/blob/main/Picture8.png)
+
 * Boosting Trees
 For boosting trees, we ran a parameter research for learning rate and maximum depth of trees. We found the optimal model that minimizes deviance has a learning rate of 0.01, maximum depth of trees of 1. Using deviance, accuracy, and ROC, we found the boosting tree model does not perform well in the unbalanced data. We will see the difference when we train the boosting model in balanced data in the next part.
  
+![alt text](https://github.com/brunoxie/Machine-Learning-Final-Project/blob/main/Picture9.png)
+
 **Balanced Data**
 
 * Logistic Regression
 Similar to what we did before, we trained 3 logistic models, including logistic regression, lasso model with lambda that minimizes cross-validated error, lasso model with lambda in which the error is within 1 se of the minimum. In terms of comparing the three models, We saw that there is no significant difference in the deviance for each model. We chose the logistic regression model as the final model and trained it both in the balanced train data and validation data. In terms of comparing the unbalanced data and balanced one, we found that actually the model’s performance is worse off with deviance increases and accuracy decreases. This might be due to the reason that replicated instances in up-sampling may not reflect the situation consistent with the test set.  
  
-
+![alt text](https://github.com/brunoxie/Machine-Learning-Final-Project/blob/main/Picture10.png)
+ 
 * Random Forest
 Here we ran the parameter search again in terms of number of trees, number of variables to possibly split at in each node, and minimal node size. The optimal model with lowest deviance has the number of trees equal to 1000, number of variables equal to 5, and minimal node size equal to 20. For 3 features with most predictive powers, the variable importance plot suggests the same result as before.
+
+![alt text](https://github.com/brunoxie/Machine-Learning-Final-Project/blob/main/Picture11.png)
  
 * Boosting Trees
 For boosting trees, we ran parameter search and found the optimal learning rate is 0.3 and optimal maximum depth of trees is 5. Note that, compared to unbalanced data, the performance of boosting trees improves substantially. The levels of accuracy and AUC of boosting are similar to the other models now. This suggests that unbalanced data do undermine the accuracy of our models and it’s necessary to transform the data into a balanced one.
+
+![alt text](https://github.com/brunoxie/Machine-Learning-Final-Project/blob/main/Picture12.png)
  
 ## IV.	Results
 
 We tested the best model for each dataset against their test datasets. We used deviance, confusion matrix, and ROC curve to determine the model with most predictive powers among these three models. For the models trained by unbalanced data, we can see the performance for each is really similar. In the ROC curve, it’s hard to distinguish each. Looking at the specific number of accuracy and AUC, we found the random forest model is the optimal one with a minimum deviance loss of 1446.06, a maximum accuracy rate of 79.86%, and a maximum AUC of 85.50%, which are slightly better than ones of the other models.
- 
+
+![alt text](https://github.com/brunoxie/Machine-Learning-Final-Project/blob/main/Picture13.png)
+
 We further examined the confusion matrix of the selected random forest model for the test set. The result here suggests that if a customer is predicted to churn, there is a 69% chance it will actually leave; if a customer is predicted to stay, there is a 82% chance it will stay. It also means that of customers that churn, 50% are predicted as churn; of customers that stay, 91% are predicted to stay. This reveals a potential problem, that is, while the model is doing generally well in predicting users who stay, it doesn’t predict well in users who churn. This is because the model is built based on unbalanced data. 
+
+![alt text](https://github.com/brunoxie/Machine-Learning-Final-Project/blob/main/Picture14.png)
  
 For the model trained in balanced data, we can also see that they have rather similar performances as the ROC curves of each model are almost overlapped. By taking a look at the specific numbers in the evaluations of model’s performances, we found the random forest model is the best model in this data with a minimal deviance of 1486.97, a maximum accuracy rate of 78.84%, a maximum AUC of 84.85%. In comparison to the unbalanced data, we see there is no significant improvement regarding the performance of the optimal model.
  
+![alt text](https://github.com/brunoxie/Machine-Learning-Final-Project/blob/main/Picture15.png)
+
 Here we examined the confusion matrix of the best random forest model. The result suggests that if a customer is predicted to churn, there is a 62% chance it will do so. If a customer is predicted to stay, then the chance it stays is 86%. It also suggests that of customers that churn, 62% of them are predicted correctly; of customers that stay, 85% of them are predicted to do so. Unfortunately, there is not much improvement in predicting those who churn by using balanced data.
- 
+
+![alt text](https://github.com/brunoxie/Machine-Learning-Final-Project/blob/main/Picture16.png)
 
 ## V.	Conclusion
 
 Our primary objective in this project is to develop a machine learning model that has very strong power in predicting churn rate. We went through models including logistic regression, random forests, boosted trees. By using the model evaluating metrics including deviance, confusion matrix, accuracy, ROC, we selected the best-performing model of random forest in the unbalanced data and balanced data respectively. These models have 80% accuracy overall, which we believed it’s sufficient to achieve our primary goal and help the Telco marketing team to predict and target customers that will leave or stay in the services.
 
 There are also potential improvements that could be made based on our models. One of the toughest issues we are facing in training a machine learning model is that the data is highly unbalanced. We tried to mitigate this issue by using the technique of up-sampling which could create a balanced data. However, our result in the balanced data shows that it does not successfully solve the issue, given the accuracy is low in predicting those who leave. Further improvements focusing on better dealing with class imbalance is highly recommended. A more sophisticated technique may be beneficial such as using weight or synthetic minority sampling technique (SMOTE).
-
-
- 
-## Appendix
-
-Column	Description
-customerID	Customer ID
-Churn	Whether the customer churned or not (Yes or No)
-gender	Whether the customer is a male or a female
-SeniorCitizen	Whether the customer is a senior citizen or not (1, 0)
-Partner	Whether the customer has a partner or not (Yes, No)
-Dependents	Whether the customer has dependents or not (Yes, No)
-tenure	Number of months the customer has stayed with the company
-PhoneService	Whether the customer has a phone service or not (Yes, No)
-MultipleLines	Whether the customer has multiple lines or not (Yes, No, No phone service)
-InternetService	Customer’s internet service provider (DSL, Fiber optic, No internet service)
-OnlineSecurity	Whether the customer has online security or not (Yes, No, No internet service)
-OnlineBackup	Whether the customer has online backup or not (Yes, No, No internet service)
-DeviceProtection	Whether the customer has device protection or not (Yes, No, No internet service)
-TechSupport	Whether the customer has tech support or not (Yes, No, No internet service)
-StreamingTV	Whether the customer has streaming TV or not (Yes, No, No internet service)
-StreamingMovies	Whether the customer has streaming movies or not (Yes, No, No internet service)
-Contract	The contract term of the customer (Month-to-month, One year, Two year)
-PaperlessBilling	Whether the customer has paperless billing or not (Yes, No)
-PaymentMethod	The customer’s payment method (Electronic check, Mailed check, Bank transfer (automatic), Credit card (automatic))
-MonthlyCharges	The amount charged to the customer monthly
-TotalCharges	The total amount charged to the customer
-
 
  
 ## Reference
