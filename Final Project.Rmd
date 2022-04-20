@@ -1,0 +1,1212 @@
+---
+title: "Predicting Tele Customers Churn Using Machine Learning Method"
+author: "Bruno Xie"
+date: "3/18/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+rm(list=ls())
+setwd("~/Desktop/BUSN 41204 Machine Learning/Final Project/")
+telco <- read.csv("WA_Fn-UseC_-Telco-Customer-Churn-2.csv")
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#load library
+library(tidyverse)
+library(Hmisc)
+library(dplyr)
+library(fastDummies)
+library(ggplot2)
+library(ggpubr)
+library(corrplot) 
+library(gridExtra)
+library(bestglm)
+library(glmnet)
+library(caret)
+library(ROCR)
+library(ranger)
+library(randomForest)
+library(xgboost)
+library(themis)
+```
+
+```{r}
+str(telco)
+summary(telco)
+```
+
+```{r}
+# deal with NA values
+sapply(telco, function(x) sum(is.na(x)))
+telco <- telco %>% drop_na()
+```
+
+## Data Summary Statistics
+
+```{r}
+# examine churn
+telco %>% 
+  group_by(Churn) %>% 
+  summarise(count = n()) %>% 
+  mutate(percent = prop.table(count)*100) %>% 
+  ggplot(aes(reorder(Churn, -percent), percent), fill=Churn) +
+  geom_col(fill=c("coral1", "darkturquoise")) +
+  geom_text(aes(label = sprintf("%.2f%%", percent)), hjust = 0.3,vjust = -0.5, size =3) +
+  labs(x="Churn", title="Churn Percent")
+```
+
+Categorical Variables Exporation
+```{r}
+# data exploration
+
+p1 <- ggplot(telco, aes(x=gender,fill=Churn))+
+  geom_bar(position = 'fill')
+
+p2 <- ggplot(telco, aes(x=SeniorCitizen,fill=Churn))+
+  geom_bar(position = 'fill')
+
+p3 <- ggplot(telco, aes(x=Partner,fill=Churn))+ 
+  geom_bar(position = 'fill')
+
+p4 <- ggplot(telco, aes(x=Dependents,fill=Churn))+ 
+  geom_bar(position = 'fill')
+
+p5 <- ggplot(telco, aes(x=PhoneService,fill=Churn))+ 
+  geom_bar(position = 'fill')+
+  scale_x_discrete(guide = guide_axis(n.dodge=3))
+
+p6 <- ggplot(telco, aes(x=MultipleLines,fill=Churn))+ 
+  geom_bar(position = 'fill')+
+  scale_x_discrete(guide = guide_axis(n.dodge=3))
+
+p7<-ggplot(telco, aes(x=InternetService,fill=Churn))+
+  geom_bar(position = 'fill')+
+  scale_x_discrete(guide = guide_axis(n.dodge=3))
+
+p8<-ggplot(telco, aes(x=OnlineSecurity,fill=Churn))+
+  geom_bar(position = 'fill')+
+  scale_x_discrete(guide = guide_axis(n.dodge=3))
+
+p9<-ggplot(telco, aes(x=OnlineBackup,fill=Churn))+
+  geom_bar(position = 'fill')+
+  scale_x_discrete(guide = guide_axis(n.dodge=3))
+
+p10<-ggplot(telco, aes(x=DeviceProtection,fill=Churn))+
+  geom_bar(position = 'fill')+
+  scale_x_discrete(guide = guide_axis(n.dodge=3))
+
+p11<-ggplot(telco, aes(x=TechSupport,fill=Churn))+
+  geom_bar(position = 'fill')+
+  scale_x_discrete(guide = guide_axis(n.dodge=3))
+          
+p12<-ggplot(telco, aes(x=StreamingTV,fill=Churn))+
+  geom_bar(position = 'fill')+
+  scale_x_discrete(guide = guide_axis(n.dodge=3))
+
+p13<-ggplot(telco, aes(x=StreamingMovies,fill=Churn))+
+  geom_bar(position = 'fill')+
+  scale_x_discrete(guide = guide_axis(n.dodge=3))
+
+p14<-ggplot(telco, aes(x=Contract,fill=Churn))+
+  geom_bar(position = 'fill')+
+  scale_x_discrete(guide = guide_axis(n.dodge=3))
+
+p15<-ggplot(telco, aes(x=PaperlessBilling,fill=Churn))+
+  geom_bar(position = 'fill')+
+  scale_x_discrete(guide = guide_axis(n.dodge=3))
+
+p16<-ggplot(telco, aes(x=PaymentMethod,fill=Churn))+
+  geom_bar(position = 'fill')+
+  scale_x_discrete(guide = guide_axis(n.dodge=3))
+```
+
+```{r}
+ggarrange(p1,p2,p3,p4, ncol=2, nrow=2, common.legend = TRUE, legend="bottom")
+```
+```{r}
+ggarrange(p7,p5,p6, ncol=3, nrow=1, common.legend = TRUE, legend="bottom")
+```
+
+
+```{r}
+ggarrange(p8,p9,p10,p11,p12,p13, ncol=3, nrow=2, common.legend = TRUE, legend="bottom")
+```
+
+```{r}
+ggarrange(p14,p15,p16, ncol=3, nrow=1, common.legend = TRUE, legend="bottom")
+```
+
+Continous Variables Exploration
+```{r}
+telco %>%
+  select(TotalCharges, MonthlyCharges, tenure) %>%
+  cor() %>%
+  corrplot()
+```
+
+
+```{r}
+p17<-ggplot(data=telco, aes(Churn, MonthlyCharges))+
+  geom_boxplot(fill=c("coral1", "darkturquoise"))
+
+p18<-ggplot(data=telco, aes(Churn, TotalCharges))+
+  geom_boxplot(fill=c("coral1", "darkturquoise"))
+
+p19<-ggplot(data=telco, aes(Churn, tenure))+
+  geom_boxplot(fill=c("coral1", "darkturquoise"))
+```
+
+```{r}
+ggarrange(p17,p18,p19, ncol=3, nrow=1)
+```
+
+## Data Processing
+
+* Drop irrelevant variable (`customerID`)
+
+* Standardize continuous variables
+
+* Transform the categorical variables
+
+* Create final dataset
+
+* Split dataset into training, validation, test dataset
+
+```{r}
+# Drop irrelevant variable
+telco <- telco %>% 
+  select(-customerID)
+```
+
+```{r}
+# Standardize continuous variables
+num_column = c("tenure", "MonthlyCharges", "TotalCharges")
+telco[num_column] <- sapply(telco[num_column], as.numeric)
+
+telco.num <- telco[,num_column]
+telco.num <- data.frame(scale(telco.num))
+```
+
+```{r}
+# Transform the categorical variables
+telco.fac <- telco %>% 
+  select(-num_column)
+
+telco.fac <- dummy_cols(telco.fac, remove_first_dummy = TRUE)
+
+columns_to_remove <- grep("No internet service", names(telco.fac))
+telco.fac <- telco.fac %>% 
+  select(-columns_to_remove)
+
+columns_to_remove <- grep("No phone service", names(telco.fac))
+telco.fac <- telco.fac %>% 
+  select(-columns_to_remove)
+
+telco.fac <- telco.fac[, 18:37]
+
+colnames(telco.fac)<-gsub("_Yes","",colnames(telco.fac))
+colnames(telco.fac)<-gsub("gender_","",colnames(telco.fac))
+colnames(telco.fac)<-gsub(" ","_",colnames(telco.fac))
+names(telco.fac)[17]<-"PaymentMethod_Credit_card_automatic"
+#telco.fac$Churn <- as.factor(telco.fac$Churn)
+```
+
+```{r}
+# Create final data
+telco.final <- cbind(telco.fac, telco.num)
+str(telco.final)
+```
+
+```{r}
+# Split dataset into training, validation, test dataset
+set.seed(1)
+
+train.index <- sample(c(1:nrow(telco.final)), 
+                      nrow(telco.final)*0.5)
+telco.train <- telco.final[train.index,]
+telco.test <- telco.final[-train.index,]
+
+valid.index <- sample(c(1:nrow(telco.test)),
+                      nrow(telco.test)*0.5)
+telco.valid <- telco.test[valid.index,]
+telco.test <- telco.test[-valid.index,]
+
+telco.all <- rbind(telco.train, telco.valid)
+
+telco.train %>% 
+  summarise(mean(Churn))
+
+telco.valid %>% 
+  summarise(mean(Churn))
+
+telco.test %>% 
+  summarise(mean(Churn))
+```
+
+# Modeling
+Logistics: What we are doing here is to use logistic regression, random forest, and boosting model (and neural network if time allows) to fit our training dataset. And we will use primarily the measure of deviance to tune parameters for each type of model, but we will also take a look at other measures including misclassification rate, ROC, AUC. Once we determine the optimal parameters for each type of model, we will train each model both on training and validation dataset. Eventually, we will use the test dataset and misclassification rate, ROC, AUC to comparing different types of model and choose the best one to predict `Churn`.
+
+## Logistic Regression
+In logistic regression, we consider the 5 types of models: regular logistic regression, lasso model (both with lambda that minimizes cross-validated error and the one that error is within 1 se of the minimum), forward selection, and backward selection. (Here, the codings for forward selection, and backward selection are not completed yet)
+
+```{r}
+telco.glm <- glm(Churn~., family = binomial, data=telco.train)
+summary(telco.glm)
+```
+
+Using lasso
+```{r}
+x <- as.matrix(telco.train[, -20])
+y <- telco.train[,20]
+```
+
+```{r}
+telco.lasso.cv = cv.glmnet(x, y,
+                           family="binomial",
+                           alpha=1)
+
+plot(telco.lasso.cv)
+```
+
+```{r}
+coef(telco.lasso.cv, s = c(telco.lasso.cv$lambda.min, telco.lasso.cv$lambda.1se))
+```
+
+
+```{r}
+glmnet.fit <- telco.lasso.cv$glmnet.fit
+plot(glmnet.fit, xvar = "lambda")
+abline(v = log(telco.lasso.cv$lambda.min), lty = 2, col = "red")
+abline(v = log(telco.lasso.cv$lambda.1se), lty = 2, col = "green")
+legend("topright", legend = c("min", "1se"), lty = 2, col = c("red", 
+    "green"))
+```
+
+```{r}
+telco.lasso.min <- glmnet(x, y, alpha = 1, lambda = telco.lasso.cv$lambda.min)
+telco.lasso.1se <- glmnet(x, y, alpha = 1, lambda = telco.lasso.cv$lambda.1se)
+```
+
+Using forward selection
+```{r}
+telco.train.bic <- data.frame(telco.train)
+names(telco.train.bic)[20] <- "y"
+telco.train.bic$y = as.factor(telco.train.bic$y)
+```
+
+```{r}
+fwd.step.bic = bestglm(telco.train.bic, family = gaussian, IC = "BIC", method = "forward")
+fwd.step.bic
+fwd.step.bic$Subsets
+indMin = which.min(fwd.step.bic$Subsets$CV)
+```
+
+Evaluate different method for logistics regression
+
+```{r}
+x.valid = data.matrix(telco.valid[,-20])
+phat.glm <- predict(telco.glm, telco.valid, type="response", probability=TRUE)
+phat.lasso.min <- predict(telco.lasso.min, x.valid, type="response", probability=TRUE)
+phat.lasso.1se <- predict(telco.lasso.1se, x.valid, type="response", probability=TRUE)
+
+phat.glm.train <- predict(telco.glm, telco.train, type="response", probability=TRUE)
+phat.lasso.min.train <- predict(telco.lasso.min, x, type="response", probability=TRUE)
+phat.lasso.1se.train <- predict(telco.lasso.1se, x, type="response", probability=TRUE)
+```
+
+* report deviance
+```{r}
+lossf = function(y,phat,wht=0.0000001) {
+  if(is.factor(y))  y = as.numeric(y)-1 
+  phat = (1-wht)*phat + wht*.5
+  py = ifelse(y==1, phat, 1-phat) 
+  return(-2*sum(log(py)))
+}
+
+lvec.glm <- lossf(telco.valid$Churn, phat.glm)
+lvec.lasso.min <- lossf(telco.valid$Churn, phat.lasso.min)
+lvec.lasso.1se <- lossf(telco.valid$Churn, phat.lasso.1se)
+lvec.fwd.bic <- min(-2 * fwd.step.bic$Subsets$logLikelihood)
+
+print(lvec.glm)
+print(lvec.lasso.min)
+print(lvec.lasso.1se)
+# Here min and 1se generate NaNs values, still trying to fix it
+```
+
+* report confusion matrix
+```{r}
+pred.train.actual <- factor(ifelse(telco.train$Churn == 1, "Yes", "No"))
+pred.valid.actual <- factor(ifelse(telco.valid$Churn == 1, "Yes", "No"))
+```
+
+```{r}
+pred.glm.train <- factor(ifelse(phat.glm.train >= 0.5, "Yes", "No"))
+pred.glm.valid <- factor(ifelse(phat.glm >= 0.5, "Yes", "No"))
+```
+
+```{r}
+confusionMatrix(data = pred.glm.train, reference = pred.train.actual)
+```
+
+```{r}
+confusionMatrix(data = pred.glm.valid, reference = pred.valid.actual)
+```
+
+```{r}
+pred.lasso.min.train <- factor(ifelse(phat.lasso.min.train >= 0.5, "Yes", "No"))
+pred.lasso.min.valid <- factor(ifelse(phat.lasso.min >= 0.5, "Yes", "No"))
+```
+
+```{r}
+confusionMatrix(data = pred.lasso.min.train, reference = pred.train.actual)
+```
+
+```{r}
+confusionMatrix(data = pred.lasso.min.valid, reference = pred.valid.actual)
+```
+
+```{r}
+pred.lasso.1se.train <- factor(ifelse(phat.lasso.1se.train >= 0.5, "Yes", "No"))
+pred.lasso.1se.valid <- factor(ifelse(phat.lasso.1se >= 0.5, "Yes", "No"))
+```
+
+```{r}
+confusionMatrix(data = pred.lasso.1se.train, reference = pred.train.actual)
+```
+
+```{r}
+confusionMatrix(data = pred.lasso.1se.valid, reference = pred.valid.actual)
+```
+
+* report ROC
+
+```{r}
+pred.glm <- prediction(phat.glm, telco.valid$Churn)
+pred.lasso.min <- prediction(phat.lasso.min, telco.valid$Churn)
+pred.lasso.1se <- prediction(phat.lasso.1se, telco.valid$Churn)
+
+perf.glm <- performance(pred.glm, "tpr", "fpr")
+perf.lasso.min <- performance(pred.lasso.min, "tpr", "fpr")
+perf.lasso.1se <- performance(pred.lasso.1se, "tpr", "fpr")
+
+plot(perf.glm, main="ROC Curves for Logistic Model (unbalanced data)", col=2, lwd=2)
+plot(perf.lasso.min, main="ROC Curves for Logistic Model (unbalanced data)", col=3, add=T, lwd=2)
+plot(perf.lasso.1se, main="ROC Curves for Logistic Model (unbalanced data)", col=4, add=T, lwd=2)
+abline(0,1,lty=2)
+legend("bottomright", 
+       legend=c("logistic","lasso min","lasso 1se"),
+       col=c(2,3,4),
+       lwd=2)
+```
+
+* report AUC
+```{r}
+perf.glm.auc <- performance(pred.glm, measure = "auc")
+perf.lasso.min.auc <- performance(pred.lasso.min, measure = "auc")
+perf.lasso.1se.auc <- performance(pred.lasso.1se, measure = "auc")
+
+print(paste0("AUC ", "logit", " :: ", perf.glm.auc@y.values[[1]] ))
+print(paste0("AUC ", "lasso min", " :: ", perf.lasso.min.auc@y.values[[1]] ))
+print(paste0("AUC ", "lasso 1se", " :: ", perf.lasso.1se.auc@y.values[[1]] ))
+```
+
+Choose the regular logistics model as final logistic model
+```{r}
+telco.glm <- glm(Churn~., family = binomial, data=telco.all)
+summary(telco.glm)
+```
+
+## Random Forest
+
+```{r}
+phat.list = list()
+```
+
+tuning parameters of mtry, bum.trees, min.node.size
+```{r}
+p=ncol(telco.train)-1
+hyper_grid_rf <- expand.grid(
+  mtry = c(p, ceiling(sqrt(p))), 
+  node_size = c(5, 10, 20),
+  num_tree = c(500, 800, 1000)
+)
+
+phat.list$rf = matrix(0.0, nrow(telco.valid), nrow(hyper_grid_rf))
+
+for(i in 1:nrow(hyper_grid_rf)) {
+  # train model
+  rf.model <- ranger(
+    formula         = Churn~.,
+    data            = telco.train, 
+    num.trees       = hyper_grid_rf$num_tree[i],
+    mtry            = hyper_grid_rf$mtry[i],
+    min.node.size   = hyper_grid_rf$node_size[i],
+    probability     = TRUE, 
+    seed            = 1
+  )   
+  
+   phat = predict(rf.model, data=telco.valid)$predictions[,2]
+   phat.list$rf[,i]=phat
+}
+```
+
+* report deviance, see which model is better
+```{r}
+nrun = ncol(phat.list$rf)
+lvec = rep(0,nrun)
+for(j in 1:nrun) lvec[j] = lossf(telco.valid$Churn,phat.list$rf[,j])
+imin = which.min(lvec)
+print(hyper_grid_rf[imin,])
+print(lvec[imin])
+```
+
+* report confusion matrix, see which model is better
+```{r}
+getConfusionMatrix = function(y,phat,thr=0.5) {
+   yhat = as.factor( ifelse(phat > thr, 1, 0) )
+   confusionMatrix(yhat, y)
+}
+
+loss.misclassification.rate = function(y, phat, thr=0.5) 
+   1 - getConfusionMatrix(y, phat, thr)$overall[1]
+```
+
+```{r}
+nrun = nrow(hyper_grid_rf)
+for(j in 1:nrun) {
+  print(hyper_grid_rf[j,])
+  cfm <- getConfusionMatrix(as.factor(telco.valid$Churn), phat.list$rf[,j], 0.5)   
+  print(cfm, printStats = F)
+  cat('misclassification rate = ', 
+      loss.misclassification.rate(as.factor(telco.valid$Churn), phat.list$rf[,j], 0.5), 
+      '\n')
+}
+```
+
+* report ROC curves, see which model is better
+```{r}
+for(i in 1:ncol(phat.list$rf)) {
+   pred = prediction(phat.list$rf[,i], telco.valid$Churn)
+   perf = performance(pred, measure = "tpr", x.measure = "fpr")
+   
+   if (i == 1) {
+     plot(perf, col = 1, lwd = 2,
+          main= 'ROC Curve for Random Forest (unbalanced data)', xlab='FPR', ylab='TPR', cex.lab=1)
+   } else {
+     plot(perf, add = T, col = i, lwd = 2)
+   }
+}
+abline(0,1,lty=2)
+#legend("bottomright",legend=1:ncol(phat.list$rf),col=1:ncol(phat.list$rf),lty=rep(1,ncol(phat.list$rf)))
+```
+
+* report AUC
+```{r}
+for(i in 1:ncol(phat.list$rf)) {
+  pred = prediction(phat.list$rf[,i], telco.valid$Churn)
+  perf <- performance(pred, measure = "auc")
+  print(paste0("AUC ", i, " :: ", perf@y.values[[1]]))
+}
+```
+
+Here, we use the result obtained from deviance to train our final model
+```{r}
+telco.rf <- ranger(
+    formula         = Churn~.,
+    data            = telco.all, 
+    num.trees       = hyper_grid_rf$num_tree[imin],
+    mtry            = hyper_grid_rf$mtry[imin],
+    min.node.size   = hyper_grid_rf$node_size[imin],
+    probability     = TRUE, 
+    seed            = 1,
+    importance      = 'impurity'
+  )   
+```
+
+report variable importance plot
+```{r}
+oo = order(telco.rf$variable.importance, decreasing = FALSE)
+barplot(telco.rf$variable.importance[oo], las = 2,
+        cex.names = 0.4, horiz = TRUE)
+```
+
+## Boosting
+```{r}
+X = Matrix::sparse.model.matrix(Churn ~ ., data = telco.final)[,-1]
+X.train = X[train.index, ]
+Y.train = telco.final$Churn[train.index]
+X.valid = X[valid.index, ]
+Y.valid = telco.final$Churn[valid.index]
+
+X.test = X[-train.index, ]
+X.test = X.test[-valid.index, ]
+Y.test = telco.final$Churn[-train.index]
+Y.test = Y.test[-valid.index]
+
+all.index <- append(train.index, valid.index)
+X.all = X[all.index, ]
+Y.all = telco.final$Churn[all.index]
+
+hyper_grid_xgb <- expand.grid(
+  shrinkage = c(.01, .1, .3),        ## controls the learning rate
+  interaction.depth = c(1, 3, 5), ## tree depth
+  nrounds = c(1000, 5000)         ## number of trees
+)
+
+# we will store phat values here
+phat.list$boost = matrix(0.0,nrow(telco.valid),nrow(hyper_grid_xgb))
+```
+
+Fitting
+```{r}
+for(i in 1:nrow(hyper_grid_xgb)) {
+  # create parameter list
+  params <- list(
+    eta = hyper_grid_xgb$shrinkage[i],
+    max_depth = hyper_grid_xgb$interaction.depth[i]
+  )
+   
+  # reproducibility
+  set.seed(1)
+  
+  # train model
+  xgb.model <- xgboost(
+    data      = X.train,
+    label     = Y.train,
+    params    = params,
+    nrounds   = hyper_grid_xgb$nrounds[i],
+    objective = "binary:logistic",     # for regression models
+    verbose   = 0,                     # silent
+    verbosity = 0                      # silent
+  )
+   
+  phat = predict(xgb.model, newdata=X.valid)
+  phat.list$boost[,i] = phat
+}
+```
+
+* report deviance, see which model is better
+```{r}
+nrun = ncol(phat.list$boost)
+lvec = rep(0,nrun)
+for(j in 1:nrun) lvec[j] = lossf(telco.valid$Churn,phat.list$boost[,j])
+imin = which.min(lvec)
+print(hyper_grid_xgb[imin,])
+print(lvec[imin])
+```
+
+* report confusion matrix, see which model is better
+```{r}
+nrun = nrow(hyper_grid_xgb)
+for(j in 1:nrun) {
+  print(hyper_grid_xgb[j,])
+  cfm <- getConfusionMatrix(as.factor(telco.valid$Churn), phat.list$boost[,j], 0.5)   
+  print(cfm, printStats = F)
+  cat('misclassification rate = ', 
+      loss.misclassification.rate(as.factor(telco.valid$Churn), phat.list$boost[,j], 0.5), 
+      '\n')
+}
+```
+
+* report ROC curves, see which model is better
+```{r}
+for(i in 1:ncol(phat.list$boost)) {
+   pred = prediction(phat.list$boost[,i], telco.valid$Churn)
+   perf = performance(pred, measure = "tpr", x.measure = "fpr")
+   
+   if (i == 1) {
+     plot(perf, col = 1, lwd = 2,
+          main= 'ROC Curve for Boosting (unbalanced data)', xlab='FPR', ylab='TPR', cex.lab=1)
+   } else {
+     plot(perf, add = T, col = i, lwd = 2)
+   }
+}
+abline(0,1,lty=2)
+#legend("bottomright",legend=1:ncol(phat.list$rf),col=1:ncol(phat.list$rf),lty=rep(1,ncol(phat.list$rf)))
+```
+
+* report AUC
+```{r}
+for(i in 1:ncol(phat.list$boost)) {
+  pred = prediction(phat.list$boost[,i], telco.valid$Churn)
+  perf <- performance(pred, measure = "auc")
+  print(paste0("AUC ", i, " :: ", perf@y.values[[1]]))
+}
+```
+
+Here, we use the result obtained from deviance to train our final model
+```{r}
+telco.xgb <- xgboost(
+    data      = X.all,
+    label     = Y.all,
+    eta       = hyper_grid_xgb$shrinkage[imin],
+    max_depth = hyper_grid_xgb$interaction.depth[imin],
+    nrounds   = hyper_grid_xgb$nrounds[imin],
+    objective = "binary:logistic",     # for regression models
+    verbose   = 0,                     # silent
+    verbosity = 0                      # silent
+  )
+```
+
+```{r}
+importance_matrix <- xgb.importance(model = telco.xgb)
+xgb.plot.importance(importance_matrix, measure = "Gain")
+```
+
+# Result
+```{r}
+phat.glm <- predict(telco.glm, telco.test, type="response", probability=TRUE)
+phat.rf = predict(telco.rf, data = telco.test)$predictions[,2]
+phat.xgb <- predict(telco.xgb, newdata=X.test)
+```
+
+deviance
+```{r}
+print(lossf(telco.test$Churn,phat.glm))
+print(lossf(telco.test$Churn,phat.rf))
+print(lossf(telco.test$Churn,phat.xgb))
+```
+
+ROC
+```{r}
+pred.glm <- prediction(phat.glm, telco.test$Churn)
+pred.rf <- prediction(phat.rf, telco.test$Churn)
+pred.xgb <- prediction(phat.xgb, telco.test$Churn)
+
+perf.glm = performance(pred.glm, measure = "tpr", x.measure = "fpr")
+perf.rf = performance(pred.rf, measure = "tpr", x.measure = "fpr")
+perf.xgb = performance(pred.xgb, measure = "tpr", x.measure = "fpr")
+
+plot(perf.glm, main="ROC Curves (unbalanced data)", col=2, lwd=2)
+plot(perf.rf, main="ROC Curves (unbalanced data)", col=3, add=T, lwd=2)
+plot(perf.xgb, main="ROC Curves (unbalanced data)", col=4, add=T, lwd=2)
+abline(0,1,lty=2)
+legend("bottomright", 
+       legend=c("logistics","random forest","boost"),
+       col=c(2,3,4),
+       lwd=2)
+```
+
+* report AUC
+```{r}
+perf.glm.auc <- performance(pred.glm, measure = "auc")
+perf.rf.auc <- performance(pred.rf, measure = "auc")
+perf.xgb.auc <- performance(pred.xgb, measure = "auc")
+
+print(paste0("AUC ", "logit", " :: ", perf.glm.auc@y.values[[1]] ))
+print(paste0("AUC ", "random forest", " :: ", perf.rf.auc@y.values[[1]] ))
+print(paste0("AUC ", "boost", " :: ", perf.xgb.auc@y.values[[1]] ))
+```
+
+* report confusion matrix
+```{r}
+pred.test.actual <- factor(ifelse(telco.test$Churn == 1, "Yes", "No"))
+
+pred.glm <- factor(ifelse(phat.glm >= 0.5, "Yes", "No"))
+pred.rf <- factor(ifelse(phat.rf >= 0.5, "Yes", "No"))
+pred.xgb <- factor(ifelse(phat.xgb >= 0.5, "Yes", "No"))
+```
+
+```{r}
+confusionMatrix(data = pred.glm, reference = pred.test.actual)
+confusionMatrix(data = pred.rf, reference = pred.test.actual)
+confusionMatrix(data = pred.xgb, reference = pred.test.actual)
+```
+
+#########
+Up-sampling
+
+```{r}
+set.seed(1)
+
+telco.final <- cbind(telco.fac, telco.num)
+
+telco.final$Churn = as.factor(telco.final$Churn)
+
+train.index <- sample(c(1:nrow(telco.final)), 
+                      nrow(telco.final)*0.5)
+telco.train <- telco.final[train.index,]
+telco.test <- telco.final[-train.index,]
+
+valid.index <- sample(c(1:nrow(telco.test)),
+                      nrow(telco.test)*0.5)
+telco.valid <- telco.test[valid.index,]
+telco.test <- telco.test[-valid.index,]
+
+telco.train <- upSample(
+  x = telco.train[,-20], # select all columns save for the last one,
+  y = telco.train[,20]
+)
+names(telco.train)[23] <- "Churn"
+describe(telco.train$Churn)
+telco.train <- telco.train %>% relocate(Churn, .before = tenure)
+
+telco.all <- rbind(telco.train, telco.valid)
+telco.all <- upSample(
+  x = telco.all[,-20], # select all columns save for the last one,
+  y = telco.all[,20]
+)
+names(telco.all)[23] <- "Churn"
+describe(telco.all$Churn)
+telco.all <- telco.all %>% relocate(Churn, .before = tenure)
+```
+
+
+```{r}
+telco.glm <- glm(Churn~., family = binomial, data=telco.train)
+summary(telco.glm)
+```
+
+Using lasso
+```{r}
+x <- as.matrix(telco.train[, -20])
+y <- telco.train[,20]
+```
+
+```{r}
+telco.lasso.cv = cv.glmnet(x, y,
+                           family="binomial",
+                           alpha=1)
+
+plot(telco.lasso.cv)
+```
+
+```{r}
+coef(telco.lasso.cv, s = c(telco.lasso.cv$lambda.min, telco.lasso.cv$lambda.1se))
+```
+
+
+```{r}
+glmnet.fit <- telco.lasso.cv$glmnet.fit
+plot(glmnet.fit, xvar = "lambda")
+abline(v = log(telco.lasso.cv$lambda.min), lty = 2, col = "red")
+abline(v = log(telco.lasso.cv$lambda.1se), lty = 2, col = "green")
+legend("topright", legend = c("min", "1se"), lty = 2, col = c("red", 
+    "green"))
+```
+
+```{r}
+telco.lasso.min <- glmnet(x, y, alpha = 1, lambda = telco.lasso.cv$lambda.min, family = "binomial")
+telco.lasso.1se <- glmnet(x, y, alpha = 1, lambda = telco.lasso.cv$lambda.1se, family = "binomial")
+```
+
+Using forward selection
+```{r}
+telco.train.bic <- data.frame(telco.train)
+names(telco.train.bic)[20] <- "y"
+telco.train.bic$y = as.factor(telco.train.bic$y)
+```
+
+```{r}
+fwd.step.bic = bestglm(telco.train.bic, family = gaussian, IC = "BIC", method = "forward")
+fwd.step.bic
+fwd.step.bic$Subsets
+```
+
+Evaluate different method for logistics regression
+
+```{r}
+x.valid = data.matrix(telco.valid[,-20])
+phat.glm <- predict(telco.glm, telco.valid, type="response", probability=TRUE)
+phat.lasso.min <- predict(telco.lasso.min, x.valid, type="response", probability=TRUE)
+phat.lasso.1se <- predict(telco.lasso.1se, x.valid, type="response", probability=TRUE)
+
+phat.glm.train <- predict(telco.glm, telco.train, type="response", probability=TRUE)
+phat.lasso.min.train <- predict(telco.lasso.min, x, type="response", probability=TRUE)
+phat.lasso.1se.train <- predict(telco.lasso.1se, x, type="response", probability=TRUE)
+```
+
+* report deviance
+```{r}
+lvec.glm <- lossf(telco.valid$Churn, phat.glm)
+lvec.lasso.min <- lossf(telco.valid$Churn, phat.lasso.min)
+lvec.lasso.1se <- lossf(telco.valid$Churn, phat.lasso.1se)
+
+print(lvec.glm)
+print(lvec.lasso.min)
+print(lvec.lasso.1se)
+# Here min and 1se generate NaNs values, still trying to fix it
+```
+
+* report confusion matrix
+```{r}
+pred.train.actual <- factor(ifelse(telco.train$Churn == 1, "Yes", "No"))
+pred.valid.actual <- factor(ifelse(telco.valid$Churn == 1, "Yes", "No"))
+```
+
+```{r}
+pred.glm.train <- factor(ifelse(phat.glm.train >= 0.5, "Yes", "No"))
+pred.glm.valid <- factor(ifelse(phat.glm >= 0.5, "Yes", "No"))
+```
+
+```{r}
+confusionMatrix(data = pred.glm.train, reference = pred.train.actual)
+```
+
+```{r}
+confusionMatrix(data = pred.glm.valid, reference = pred.valid.actual)
+```
+
+```{r}
+pred.lasso.min.train <- factor(ifelse(phat.lasso.min.train >= 0.5, "Yes", "No"))
+pred.lasso.min.valid <- factor(ifelse(phat.lasso.min >= 0.5, "Yes", "No"))
+```
+
+```{r}
+confusionMatrix(data = pred.lasso.min.train, reference = pred.train.actual)
+```
+
+```{r}
+confusionMatrix(data = pred.lasso.min.valid, reference = pred.valid.actual)
+```
+
+```{r}
+pred.lasso.1se.train <- factor(ifelse(phat.lasso.1se.train >= 0.5, "Yes", "No"))
+pred.lasso.1se.valid <- factor(ifelse(phat.lasso.1se >= 0.5, "Yes", "No"))
+```
+
+```{r}
+confusionMatrix(data = pred.lasso.1se.train, reference = pred.train.actual)
+```
+
+```{r}
+confusionMatrix(data = pred.lasso.1se.valid, reference = pred.valid.actual)
+```
+
+* report ROC
+
+```{r}
+pred.glm <- prediction(phat.glm, telco.valid$Churn)
+pred.lasso.min <- prediction(phat.lasso.min, telco.valid$Churn)
+pred.lasso.1se <- prediction(phat.lasso.1se, telco.valid$Churn)
+
+perf.glm <- performance(pred.glm, "tpr", "fpr")
+perf.lasso.min <- performance(pred.lasso.min, "tpr", "fpr")
+perf.lasso.1se <- performance(pred.lasso.1se, "tpr", "fpr")
+
+plot(perf.glm, main="ROC Curves for Logistic Regression (balanced data)", col=2, lwd=2)
+plot(perf.lasso.min, main="ROC Curves for Logistic Regression (balanced data)", col=3, add=T, lwd=2)
+plot(perf.lasso.1se, main="ROC Curves for Logistic Regression (balanced data)", col=4, add=T, lwd=2)
+abline(0,1,lty=2)
+legend("bottomright", 
+       legend=c("logistic","lasso min","lasso 1se"),
+       col=c(2,3,4),
+       lwd=2)
+```
+
+* report AUC
+```{r}
+perf.glm.auc <- performance(pred.glm, measure = "auc")
+perf.lasso.min.auc <- performance(pred.lasso.min, measure = "auc")
+perf.lasso.1se.auc <- performance(pred.lasso.1se, measure = "auc")
+
+print(paste0("AUC ", "logit", " :: ", perf.glm.auc@y.values[[1]] ))
+print(paste0("AUC ", "lasso min", " :: ", perf.lasso.min.auc@y.values[[1]] ))
+print(paste0("AUC ", "lasso 1se", " :: ", perf.lasso.1se.auc@y.values[[1]] ))
+```
+
+Choose the reuglar logistics model as final logistic model
+```{r}
+telco.glm <- glm(Churn~., family = binomial, data=telco.all)
+summary(telco.glm)
+```
+
+## Random Forest
+
+```{r}
+phat.list = list()
+```
+
+tuning parameters of mtry, bum.trees, min.node.size
+```{r}
+p=ncol(telco.train)-1
+hyper_grid_rf <- expand.grid(
+  mtry = c(p, ceiling(sqrt(p))), 
+  node_size = c(5, 10, 20),
+  num_tree = c(500, 800, 1000)
+)
+
+phat.list$rf = matrix(0.0, nrow(telco.valid), nrow(hyper_grid_rf))
+
+for(i in 1:nrow(hyper_grid_rf)) {
+  # train model
+  rf.model <- ranger(
+    formula         = Churn~.,
+    data            = telco.train, 
+    num.trees       = hyper_grid_rf$num_tree[i],
+    mtry            = hyper_grid_rf$mtry[i],
+    min.node.size   = hyper_grid_rf$node_size[i],
+    probability     = TRUE, 
+    seed            = 1
+  )   
+   
+   phat = predict(rf.model, data=telco.valid)$predictions[,2]
+   phat.list$rf[,i]=phat
+}
+```
+
+* report deviance, see which model is better
+```{r}
+nrun = ncol(phat.list$rf)
+lvec = rep(0,nrun)
+for(j in 1:nrun) lvec[j] = lossf(telco.valid$Churn,phat.list$rf[,j])
+imin = which.min(lvec)
+print(hyper_grid_rf[imin,])
+print(lvec[imin])
+```
+
+* report confusion matrix, see which model is better
+```{r}
+nrun = nrow(hyper_grid_rf)
+for(j in 1:nrun) {
+  print(hyper_grid_rf[j,])
+  cfm <- getConfusionMatrix(as.factor(telco.valid$Churn), phat.list$rf[,j], 0.5)   
+  print(cfm, printStats = F)
+  cat('misclassification rate = ', 
+      loss.misclassification.rate(as.factor(telco.valid$Churn), phat.list$rf[,j], 0.5), 
+      '\n')
+}
+```
+
+* report ROC curves, see which model is better
+```{r}
+for(i in 1:ncol(phat.list$rf)) {
+   pred = prediction(phat.list$rf[,i], telco.valid$Churn)
+   perf = performance(pred, measure = "tpr", x.measure = "fpr")
+   
+   if (i == 1) {
+     plot(perf, col = 1, lwd = 2,
+          main= 'ROC Curve for Random Forest (balanced data)', xlab='FPR', ylab='TPR', cex.lab=1)
+   } else {
+     plot(perf, add = T, col = i, lwd = 2)
+   }
+}
+abline(0,1,lty=2)
+#legend("bottomright",legend=1:ncol(phat.list$rf),col=1:ncol(phat.list$rf),lty=rep(1,ncol(phat.list$rf)))
+```
+
+* report AUC
+```{r}
+for(i in 1:ncol(phat.list$rf)) {
+  pred = prediction(phat.list$rf[,i], telco.valid$Churn)
+  perf <- performance(pred, measure = "auc")
+  print(paste0("AUC ", i, " :: ", perf@y.values[[1]]))
+}
+```
+
+Here, we use the result obtained from deviance to train our final model
+```{r}
+telco.rf <- ranger(
+    formula         = Churn~.,
+    data            = telco.all, 
+    num.trees       = hyper_grid_rf$num_tree[imin],
+    mtry            = hyper_grid_rf$mtry[imin],
+    min.node.size   = hyper_grid_rf$node_size[imin],
+    probability     = TRUE, 
+    seed            = 1,
+    importance      = 'impurity'
+  )   
+```
+
+report variable importance plot
+```{r}
+oo = order(telco.rf$variable.importance, decreasing = FALSE)
+barplot(telco.rf$variable.importance[oo], las = 2,
+        cex.names = 0.4, horiz = TRUE)
+```
+
+## Boosting
+```{r}
+X = Matrix::sparse.model.matrix(Churn ~ ., data = telco.final)[,-1]
+X.train = Matrix::sparse.model.matrix(Churn ~ ., data = telco.train)[,-1]
+Y.train = telco.train$Churn
+X.valid = Matrix::sparse.model.matrix(Churn ~ ., data = telco.valid)[,-1]
+Y.valid = telco.valid$Churn
+
+X.test = Matrix::sparse.model.matrix(Churn ~ ., data = telco.test)[,-1]
+Y.test = telco.test$Churn
+
+X.all = Matrix::sparse.model.matrix(Churn ~ ., data = telco.all)[,-1]
+Y.all = telco.all$Churn
+
+hyper_grid_xgb <- expand.grid(
+  shrinkage = c(.01, .1, .3),        ## controls the learning rate
+  interaction.depth = c(1, 3, 5), ## tree depth
+  nrounds = c(1000, 5000)         ## number of trees
+)
+
+# we will store phat values here
+phat.list$boost = matrix(0.0,nrow(telco.valid),nrow(hyper_grid_xgb))
+```
+
+Fitting
+```{r}
+for(i in 1:nrow(hyper_grid_xgb)) {
+  # create parameter list
+  params <- list(
+    eta = hyper_grid_xgb$shrinkage[i],
+    max_depth = hyper_grid_xgb$interaction.depth[i]
+  )
+   
+  # reproducibility
+  set.seed(1)
+  
+  # train model
+  xgb.model <- xgboost(
+    data      = X.train,
+    label     = as.numeric(as.character(Y.train)),
+    params    = params,
+    nrounds   = hyper_grid_xgb$nrounds[i],
+    objective = "binary:logistic",     # for regression models
+    verbose   = 0,                     # silent
+    verbosity = 0                      # silent
+  )
+   
+  phat = predict(xgb.model, newdata=X.valid)
+  phat.list$boost[,i] = phat
+}
+```
+
+* report deviance, see which model is better
+```{r}
+nrun = ncol(phat.list$boost)
+lvec = rep(0,nrun)
+for(j in 1:nrun) lvec[j] = lossf(telco.valid$Churn,phat.list$boost[,j])
+imin = which.min(lvec)
+print(hyper_grid_xgb[imin,])
+print(lvec[imin])
+```
+
+* report confusion matrix, see which model is better
+```{r}
+getConfusionMatrix = function(y,phat,thr=0.5) {
+   yhat = as.factor( ifelse(phat > thr, 1, 0) )
+   confusionMatrix(yhat, y)
+}
+
+loss.misclassification.rate = function(y, phat, thr=0.5) 
+   1 - getConfusionMatrix(y, phat, thr)$overall[1]
+```
+
+```{r}
+nrun = nrow(hyper_grid_xgb)
+for(j in 1:nrun) {
+  print(hyper_grid_xgb[j,])
+  cfm <- getConfusionMatrix(as.factor(telco.valid$Churn), phat.list$boost[,j], 0.5)   
+  print(cfm, printStats = F)
+  cat('misclassification rate = ', 
+      loss.misclassification.rate(as.factor(telco.valid$Churn), phat.list$boost[,j], 0.5), 
+      '\n')
+}
+```
+
+* report ROC curves, see which model is better
+```{r}
+for(i in 1:ncol(phat.list$boost)) {
+   pred = prediction(phat.list$boost[,i], telco.valid$Churn)
+   perf = performance(pred, measure = "tpr", x.measure = "fpr")
+   
+   if (i == 1) {
+     plot(perf, col = 1, lwd = 2,
+          main= 'ROC Curve for Boosting (balanced data)', xlab='FPR', ylab='TPR', cex.lab=1)
+   } else {
+     plot(perf, add = T, col = i, lwd = 2)
+   }
+}
+abline(0,1,lty=2)
+#legend("bottomright",legend=1:ncol(phat.list$rf),col=1:ncol(phat.list$rf),lty=rep(1,ncol(phat.list$rf)))
+```
+
+* report AUC
+```{r}
+for(i in 1:ncol(phat.list$boost)) {
+  pred = prediction(phat.list$boost[,i], telco.valid$Churn)
+  perf <- performance(pred, measure = "auc")
+  print(paste0("AUC ", i, " :: ", perf@y.values[[1]]))
+}
+```
+
+Here, we use the result obtained from deviance to train our final model
+```{r}
+telco.xgb <- xgboost(
+    data      = X.all,
+    label     = as.numeric(as.character(Y.all)),
+    eta       = hyper_grid_xgb$shrinkage[imin],
+    max_depth = hyper_grid_xgb$interaction.depth[imin],
+    nrounds   = hyper_grid_xgb$nrounds[imin],
+    objective = "binary:logistic",     # for regression models
+    verbose   = 0,                     # silent
+    verbosity = 0                      # silent
+  )
+```
+
+```{r}
+importance_matrix <- xgb.importance(model = telco.xgb)
+xgb.plot.importance(importance_matrix, measure = "Gain")
+```
+
+# Result
+
+```{r}
+phat.glm <- predict(telco.glm, telco.test, type="response", probability=TRUE)
+phat.rf = predict(telco.rf, data = telco.test)$predictions[,2]
+phat.xgb <- predict(telco.xgb, newdata=X.test)
+```
+
+deviance
+```{r}
+print(lossf(telco.test$Churn,phat.glm))
+print(lossf(telco.test$Churn,phat.rf))
+print(lossf(telco.test$Churn,phat.xgb))
+```
+
+```{r}
+pred.glm <- prediction(phat.glm, telco.test$Churn)
+pred.rf <- prediction(phat.rf, telco.test$Churn)
+pred.xgb <- prediction(phat.xgb, telco.test$Churn)
+
+perf.glm = performance(pred.glm, measure = "tpr", x.measure = "fpr")
+perf.rf = performance(pred.rf, measure = "tpr", x.measure = "fpr")
+perf.xgb = performance(pred.xgb, measure = "tpr", x.measure = "fpr")
+
+plot(perf.glm, main="ROC Curves (balanced data)", col=2, lwd=2)
+plot(perf.rf, main="ROC Curves (balanced data)", col=3, add=T, lwd=2)
+plot(perf.xgb, main="ROC Curves (balanced data)", col=4, add=T, lwd=2)
+abline(0,1,lty=2)
+legend("bottomright", 
+       legend=c("logistics","random forest","boost"),
+       col=c(2,3,4),
+       lwd=2)
+```
+
+* report AUC
+```{r}
+perf.glm.auc <- performance(pred.glm, measure = "auc")
+perf.rf.auc <- performance(pred.rf, measure = "auc")
+perf.xgb.auc <- performance(pred.xgb, measure = "auc")
+
+print(paste0("AUC ", "logit", " :: ", perf.glm.auc@y.values[[1]] ))
+print(paste0("AUC ", "random forest", " :: ", perf.rf.auc@y.values[[1]] ))
+print(paste0("AUC ", "boost", " :: ", perf.xgb.auc@y.values[[1]] ))
+```
+
+* report confusion matrix
+```{r}
+pred.test.actual <- factor(ifelse(telco.test$Churn == 1, "Yes", "No"))
+
+pred.glm <- factor(ifelse(phat.glm >= 0.5, "Yes", "No"))
+pred.rf <- factor(ifelse(phat.rf >= 0.5, "Yes", "No"))
+pred.xgb <- factor(ifelse(phat.xgb >= 0.5, "Yes", "No"))
+```
+
+```{r}
+confusionMatrix(data = pred.glm, reference = pred.test.actual)
+confusionMatrix(data = pred.rf, reference = pred.test.actual)
+confusionMatrix(data = pred.xgb, reference = pred.test.actual)
+```
