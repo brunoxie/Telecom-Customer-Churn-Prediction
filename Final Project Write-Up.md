@@ -64,7 +64,7 @@ Given that our data is unbalanced, with the ratio of users churned and not churn
 
 **Summary Results**
 
-[alt text](https://github.com/brunoxie/Machine-Learning-Final-Project/blob/main/Picture17.png)
+![alt text](https://github.com/brunoxie/Machine-Learning-Final-Project/blob/main/Picture17.png)
 
 **Unbalanced Data**
 
