@@ -64,18 +64,7 @@ Given that our data is unbalanced, with the ratio of users churned and not churn
 
 **Summary Results**
 
-	Original Data (Unbalanced)	Up-sampling Data (balanced)
-	Deviance	Accuracy (Confusion Matrix)	AUC	Deviance	Accuracy (Confusion Matrix)	AUC
-I.	Model selection & tuning parameters (based on the validation set)
-Logistic 	Regression	1482.23	0.8066	0.8399	1757.64	0.7457	0.8380
-	Lasso min lambda	1484.34	0.7986	0.8318	1755.59	0.7486	0.8383
-	Lasso 1sd lambda	1489.19	0.7878	0.8257	1758.97	0.7474	0.8348
-Random Forest	1503.71	0.8009	0.8334	1606.40	0.7867	0.8238
-Boosted Tree	2540.59	0.6752	0.5109	1681.13	0.7537	0.8309
-II.	Results comparison (based on the test set)
-Logistic Regression	1447.27	0.7981	0.8489	1689.83	0.7497	0.8487
-Random Forest	1446.06	0.7986	0.8550	1495.32	0.7901	0.8486
-Boosted Tree	1490.41	0.7838	0.8493	1574.47	0.7662	0.8528
+[alt text](https://github.com/brunoxie/Machine-Learning-Final-Project/blob/main/Picture17.png)
 
 **Unbalanced Data**
 
