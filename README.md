@@ -30,7 +30,7 @@ We used the following metrics to evaluate model performance:
 - **ROC/AUC**: To evaluate model performance in distinguishing between churned and retained customers.
 
 ## Code
-You can find the code written in R [here](Code.Rmd)
+You can find the code written in R [here](Code.Rmd).
 
 ## Deliverables
 The final deliverables of this project include an [Analysis Summary](Analysis%20Summary.md) and a [Slide](Slide.pdf). The analysis summary details the approaches and the results. And the slide gives a high-level presentation on the analysis.
