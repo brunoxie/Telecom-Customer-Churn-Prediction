@@ -1,5 +1,5 @@
 # Telecom Customer Churn Prediction
-A machine learning prediction project by Bruno Xie
+A machine learning prediction project using __R__ by Bruno Xie
 
 ## Overview
 
