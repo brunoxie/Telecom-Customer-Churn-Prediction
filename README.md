@@ -21,7 +21,7 @@ The dataset used for this analysis was sourced from the IBM Sample Data Sets for
 - **Account Information**: Length of tenure, contract type, payment method, etc.
 - **Demographics**: Age, gender, family details.
 
-You can access the dataset [here](https://www.ibm.com/communities/analytics/watson-analytics-blog/).
+You can access the dataset [here](data).
 
 ## Methodology
 
