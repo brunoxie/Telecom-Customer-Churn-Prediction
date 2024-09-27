@@ -1,4 +1,5 @@
 # Telecom Customer Churn Prediction
+Bruno Xie
 
 ## Overview
 
