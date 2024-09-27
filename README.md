@@ -5,8 +5,8 @@
 This project aims to predict customer churn for a telecommunications company using machine learning models. The motivation behind this project stems from the fact that customer retention is crucial for reducing acquisition costs and maximizing profits. Our goal is to build models that accurately predict whether a customer will leave (churn) or stay with the company, allowing targeted retention strategies.
 
 ## Deliverables
-- [Analysis Summary](Analysis Summary.md)
-- [Presentation]()
+- [Analysis Summary](Analysis%20Summary.md)
+- [Presentation](Presentation.pdf)
 - [Code](Code.Rmd)
 
 ## Context
